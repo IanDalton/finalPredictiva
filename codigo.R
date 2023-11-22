@@ -1,6 +1,7 @@
 # paquetes
 
 install.packages("mice")
+install.packages("heatmaply")
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -21,6 +22,13 @@ library(factoextra)
 library(FactoMineR)
 library(gridExtra)
 library(mice)
+library(heatmaply)
+install.packages("pheatmap")
+install.packages("dendextend")
+library(pheatmap)
+library(dendextend)
+install.packages("viridis")
+library(viridis)
 
 # Missings
 
@@ -104,6 +112,9 @@ density_plots <- lapply(names(df_c)[1:(ncol(df_c) - 1)], function(col) {
 
 grid.arrange(grobs = density_plots, ncol = 3) 
 
+# Distancias
+
+
 # MCA
 
 df_cat = data %>% select(neighbourhood,room_type,type)
@@ -150,3 +161,4 @@ ggplot(data_filtrada, aes(x = 1, y = price)) +
   labs(x = NULL) + 
   scale_y_continuous(labels = scales::comma_format(scale = 1, big.mark = ",")) +
   theme_minimal()
+

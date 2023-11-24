@@ -1,6 +1,9 @@
 # paquetes
 
 install.packages("mice")
+install.packages("ggmap")
+
+library(ggmap)
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -21,6 +24,28 @@ library(factoextra)
 library(FactoMineR)
 library(gridExtra)
 library(mice)
+
+data = read.csv("airbnb_clean.csv")
+# on data baths replace Private with 1 and Half-bath with 0.5 and shared with 0
+data$bath <- gsub("Private", 1, data$bath)
+data$bath <- gsub("Half-bath", 0.5, data$bath)
+data$bath <- gsub("Shared", 0, data$bath)
+#turn into numeric
+data$bath <- as.numeric(data$bath)
+
+
+# Get the map
+
+
+
+# Plot the map
+
+
+
+# Create a map of Ciudad autonoma de buenos aires
+
+
+
 
 # Missings
 

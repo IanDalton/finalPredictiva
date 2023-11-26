@@ -2,9 +2,6 @@
 
 install.packages("mice")
 install.packages("heatmaply")
-install.packages("ggmap")
-
-library(ggmap)
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -33,28 +30,6 @@ library(dendextend)
 install.packages("viridis")
 library(viridis)
 
-data = read.csv("airbnb_clean.csv")
-# on data baths replace Private with 1 and Half-bath with 0.5 and shared with 0
-data$bath <- gsub("Private", 1, data$bath)
-data$bath <- gsub("Half-bath", 0.5, data$bath)
-data$bath <- gsub("Shared", 0, data$bath)
-#turn into numeric
-data$bath <- as.numeric(data$bath)
-
-
-# Get the map
-
-
-
-# Plot the map
-
-
-
-# Create a map of Ciudad autonoma de buenos aires
-
-
-
-
 # Missings
 
 # Assuming missing_percentages is a data frame with one column
@@ -70,7 +45,7 @@ missing_cols <- missing_percentages %>%
 # Create a bar plot for columns with missing values
 ggplot(missing_cols, aes(x = reorder(row.names(missing_cols), -!!sym(names(missing_cols)[1])), y = !!sym(names(missing_cols)[1]))) +
   geom_bar(stat = "identity", fill = "steelblue", alpha = 0.7) +
-  labs(title = "Percentage of Missing Values by Column",
+  labs(
        x = "Column",
        y = "Percentage Missing") +
   theme_minimal() +
@@ -85,7 +60,7 @@ GGally::ggcorr(
 
 # Clustering
 
-cols <- c("minimum_nights", "number_of_reviews", "reviews_per_month", "calculated_host_listings_count", "availability_365", "number_of_reviews_ltm", "bedroom", "bed", "bath")
+cols <- c("minimum_nights", "number_of_reviews", "reviews_per_month","availability_365", "bedroom", "bed", "bath")
 
 rob_scale <- function(x) {
   if (is.numeric(x)) {
@@ -186,4 +161,102 @@ ggplot(data_filtrada, aes(x = 1, y = price)) +
   labs(x = NULL) + 
   scale_y_continuous(labels = scales::comma_format(scale = 1, big.mark = ",")) +
   theme_minimal()
+
+
+# frecuencia barrios
+
+frecuencia_barrios <- table(data$neighbourhood)
+barrios_ordenados <- names(sort(frecuencia_barrios, decreasing = TRUE))
+top5_barrios <- barrios_ordenados[1:5]
+datos_top5 <- data[data$neighbourhood %in% top5_barrios, ]
+datos_top5$neighbourhood <- factor(datos_top5$neighbourhood, levels = top5_barrios)
+grafico <- ggplot(datos_top5, aes(x = neighbourhood, fill = neighbourhood)) +
+  geom_bar(stat = "count") +
+  labs(
+       x = NULL,  
+       y = NULL) +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank()) +  
+  guides(fill = FALSE)
+print(grafico)
+
+# analisis de palermo por room_type
+
+datos_palermo <- subset(data, neighbourhood == "Palermo")
+
+grafico <- ggplot(datos_palermo, aes(x = reorder(room_type, -table(room_type)[room_type]), fill = room_type)) +
+  geom_bar() +
+  labs(title = "Análisis de Palermo",
+       x = "Tipo de habitación",
+       y = "Cantidad de registros") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +  
+  guides(fill = FALSE)
+
+print(grafico)
+
+# precio vs room_type
+
+data$price <- as.numeric(data$price)
+data_filtrada2 <- filter(data, price <= 700000)
+data$room_type <- as.factor(data$room_type)
+
+
+grafico_puntos <- ggplot(data_filtrada2, aes(x = room_type, y = price, color = room_type)) +
+  geom_point(position = position_jitter(width = 0.2), size = 3) +
+  labs(
+       x = "Tipo de Habitación",
+       y = "Precio") +
+  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  # Establecer el formato de etiqueta del eje y
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +
+  guides(color = FALSE)  
+print(grafico_puntos)
+
+# cantidad de habitaciones vs price
+
+datos_filtrados3 <- subset(data, bedroom <= 5 & price <= 1000000)
+
+ggplot(datos_filtrados3, aes(x = bedroom, y = price)) +
+  geom_point() +  # Puntos para cada observación
+  labs(title = "Cantidad de habitaciones vs Precio",
+       x = "Cantidad de Habitaciones",
+       y = "Precio") +
+  scale_y_continuous(labels = scales::dollar_format()) +  # Formato de etiquetas en dólares
+  theme_minimal()  +
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+# cantidad de camas vs price
+
+datos_filtrados4 <- subset(data, bed <= 5 & price <= 1000000)
+
+ggplot(datos_filtrados4, aes(x = bed, y = price)) +
+  geom_point() +
+  labs(title = "Cantidad de camas vs Precio",
+       x = "Cantidad de camas",
+       y = "Precio") +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  scale_x_continuous(breaks = seq(0, 10, 1)) +  # Establecer los números del eje x
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+# cantidad de baños vs price
+
+datos_filtrados5 <- subset(data, bath <= 5 & price <= 1000000 & bath %in% c(1, 2, 3, 4, 5))
+
+ggplot(datos_filtrados5, aes(x = bath, y = price)) +
+  geom_point() +  
+  labs(title = "Cantidad de baños vs Precio",
+       x = "Cantidad de baños",
+       y = "Precio") +
+  scale_y_continuous(labels = scales::dollar_format()) + 
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) 
 

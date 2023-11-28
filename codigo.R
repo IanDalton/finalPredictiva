@@ -2,6 +2,10 @@
 
 install.packages("mice")
 install.packages("heatmaply")
+install.packages("pheatmap")
+install.packages("dendextend")
+install.packages("viridis")
+
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -23,12 +27,11 @@ library(FactoMineR)
 library(gridExtra)
 library(mice)
 library(heatmaply)
-install.packages("pheatmap")
-install.packages("dendextend")
 library(pheatmap)
 library(dendextend)
-install.packages("viridis")
 library(viridis)
+
+data = read.csv("airbnb_clean.csv")
 
 # Missings
 
@@ -138,11 +141,12 @@ fviz_mca_var(mca, col.var = "cos2",
 
 # outlier de precio
 
-ggplot(data, aes(x = 1, y = price)) +
+ggplot(data, aes(x = 1, y = log(price))) +
   geom_boxplot() +
   labs(x = NULL) + 
   scale_y_continuous(labels = scales::comma_format(scale = 1, big.mark = ",")) +
   theme_minimal()
+
 
 data_filtrada <- filter(data, price <= 50000)
 
@@ -152,6 +156,14 @@ ggplot(data_filtrada, aes(x = price)) +
   geom_histogram(fill = "black", alpha = 0.5) +
   scale_x_continuous(labels = scales::dollar_format()) +
   scale_y_continuous(labels = scales::comma_format()) +
+  theme_minimal()
+
+# Alternativa
+
+ggplot(data, aes(x = 1, y = price)) +
+  geom_boxplot() +
+  labs(x = NULL) + 
+  scale_y_continuous(limits= c(0,50000),labels = scales::comma_format(scale = 1, big.mark = ",")) +
   theme_minimal()
 
 # boxplot de precio --> hasta 50.000
@@ -260,3 +272,88 @@ ggplot(datos_filtrados5, aes(x = bath, y = price)) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) 
 
+# create a multiple box plot graph compating the price of each room type and price
+
+ggplot(data, aes(x = room_type, y = log(price), fill = room_type)) +
+  geom_boxplot() +
+  labs(
+       x = "Tipo de Habitación",
+       y = "Precio",
+       caption = "Se uso una escala logaritmica") +
+  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +
+  guides(color = FALSE)
+
+#create the same graph but with the neighbourhood
+
+ggplot(data, aes(x = neighbourhood, y = log(price), fill = neighbourhood)) +
+  geom_boxplot() +
+  labs(
+       x = "Barrio",
+       y = "Precio",
+       caption = "Se uso una escala logaritmica",
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ neighbourhood, data = data))$`Pr(>F)`[1])) +
+  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +
+  guides(color = FALSE)
+
+
+# botplot  de cantidad de camas y precio. un boxplot por cada cama
+
+ggplot(data, aes(x = factor(bed), y = log(price), fill = factor(bed))) +
+  geom_boxplot() +
+  labs(
+       x = "Cantidad de camas",
+       y = "Precio",
+       caption = "Se uso una escala logaritmica",
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ factor(bed), data = data))$`Pr(>F)`[1])
+       ) +
+  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +
+  guides(color = FALSE)
+
+# botplot  de cantidad de baños y precio. un boxplot por cada baño
+
+ggplot(data, aes(x = factor(bath), y = log(price), fill = factor(bath))) +
+  geom_boxplot() +
+  labs(
+       x = "Cantidad de baños",
+       y = "Precio",
+       caption = "Se uso una escala logaritmica",
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ factor(bath), data = data))$`Pr(>F)`[1])
+       ) +
+  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +
+  guides(color = FALSE)
+
+# histograma mostrando la cantidad de cantidad de habitaciones
+
+ggplot(data, aes(x = bedroom)) +
+  geom_histogram(fill = "black", alpha = 0.5) +
+  scale_x_continuous(breaks = seq(0, 8, 1)) +  
+  scale_y_continuous(labels = scales::comma_format()) +
+  labs(
+    title = "Cantidad de habitaciones",
+       x = "Cantidad de habitaciones",
+       y = "Cantidad de registros") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())  +
+  guides(color = FALSE)

@@ -31,7 +31,7 @@ library(pheatmap)
 library(dendextend)
 library(viridis)
 
-data = read.csv("airbnb_clean.csv")
+data = read.csv("listings_clean.csv")
 
 # Missings
 
@@ -290,13 +290,13 @@ ggplot(data, aes(x = room_type, y = log(price), fill = room_type)) +
 
 #create the same graph but with the neighbourhood
 
-ggplot(data, aes(x = neighbourhood, y = log(price), fill = neighbourhood)) +
+ggplot(data, aes(x = neighbourhood_cleansed, y = log(price), fill = neighbourhood_cleansed)) +
   geom_boxplot() +
   labs(
        x = "Barrio",
        y = "Precio",
        caption = "Se uso una escala logaritmica",
-       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ neighbourhood, data = data))$`Pr(>F)`[1])) +
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ neighbourhood_cleansed, data = data))$`Pr(>F)`[1])) +
   scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5),
@@ -308,15 +308,14 @@ ggplot(data, aes(x = neighbourhood, y = log(price), fill = neighbourhood)) +
 
 # botplot  de cantidad de camas y precio. un boxplot por cada cama
 
-ggplot(data, aes(x = factor(bed), y = log(price), fill = factor(bed))) +
+ggplot(data, aes(x = factor(beds), y = log(price), fill = factor(beds))) +
   geom_boxplot() +
   labs(
        x = "Cantidad de camas",
        y = "Precio",
        caption = "Se uso una escala logaritmica",
-       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ factor(bed), data = data))$`Pr(>F)`[1])
-       ) +
-  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ factor(beds), data = data))$`Pr(>F)`[1])
+       ) +scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -326,13 +325,13 @@ ggplot(data, aes(x = factor(bed), y = log(price), fill = factor(bed))) +
 
 # botplot  de cantidad de baños y precio. un boxplot por cada baño
 
-ggplot(data, aes(x = factor(bath), y = log(price), fill = factor(bath))) +
+ggplot(data, aes(x = factor(bathrooms), y = log(price), fill = factor(bathrooms))) +
   geom_boxplot() +
   labs(
        x = "Cantidad de baños",
        y = "Precio",
        caption = "Se uso una escala logaritmica",
-       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ factor(bath), data = data))$`Pr(>F)`[1])
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ factor(bathrooms), data = data))$`Pr(>F)`[1])
        ) +
   scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
   theme_minimal() +
@@ -344,7 +343,7 @@ ggplot(data, aes(x = factor(bath), y = log(price), fill = factor(bath))) +
 
 # histograma mostrando la cantidad de cantidad de habitaciones
 
-ggplot(data, aes(x = bedroom)) +
+ggplot(data, aes(x = bedrooms)) +
   geom_histogram(fill = "black", alpha = 0.5) +
   scale_x_continuous(breaks = seq(0, 8, 1)) +  
   scale_y_continuous(labels = scales::comma_format()) +
@@ -357,3 +356,18 @@ ggplot(data, aes(x = bedroom)) +
         axis.title.x = element_blank(), 
         axis.title.y = element_blank())  +
   guides(color = FALSE)
+
+data_modified <- data %>%
+  mutate(categorias = str_extract_all(host_verifications, "'(.*?)'")) %>%   # Extract words between quotes
+  unnest(categorias) 
+
+ggplot(data_modified, aes(x = categorias, y = log(price), fill = categorias)) +
+  geom_boxplot() +
+  labs(
+       x = "Verificaciones",
+       y = "Precio",
+       caption = "Se uso una escala logaritmica",
+       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ categorias, data = data_modified))$`Pr(>F)`[1])
+       ) +
+  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +
+  theme_minimal() 

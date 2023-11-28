@@ -1,11 +1,5 @@
 # paquetes
 
-install.packages("mice")
-install.packages("heatmaply")
-install.packages("pheatmap")
-install.packages("dendextend")
-install.packages("viridis")
-
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -63,7 +57,7 @@ GGally::ggcorr(
 
 # Clustering
 
-cols <- c("minimum_nights", "number_of_reviews", "reviews_per_month","availability_365", "bedroom", "bed", "bath")
+cols <- c( "host_listings_count","accommodates", "bathrooms", "bedrooms", "beds", "minimum_nights", "maximum_nights", "availability_30", "availability_60", "availability_90", "availability_365", "number_of_reviews", "calculated_host_listings_count",  "reviews_per_month", "is_shared_bathroom")
 
 rob_scale <- function(x) {
   if (is.numeric(x)) {
@@ -85,10 +79,10 @@ df_c <- df_c[, !constant_cols] # Remove constant columns
 variance_threshold <- 0.01  # Adjust as needed
 df_c <- df_c[, sapply(df_c, function(x) var(x, na.rm = TRUE) > variance_threshold)] # Remove near-constant columns
 
-hopkins = factoextra::get_clust_tendency(df_c, n=100, seed=321)
+hopkins = factoextra::get_clust_tendency(df_c, n=35, seed=321)
 cat("Hopkins =", hopkins$hopkins_stat)
 
-###Hopkins = 0.9769666
+###Hopkins = 0.9967427
 
 # agrupaciones
 
@@ -97,7 +91,7 @@ fviz_nbclust(df_c, FUNcluster=hcut, method="wss", k.max=20
              ,diss=dist(df_c, method="manhattan"), hc_method="average")
 
 #silhouette
-fviz_nbclust(df_c, FUNcluster=hcut, method="silhouette", k.max=20
+fviz_nbclust(df_c, FUNcluster=hcut, method="silhouette", k.max=15
              ,diss=dist(df_c, method="manhattan"), hc_method="average") 
 
 
@@ -109,18 +103,15 @@ df_c$cluster <- as.factor(km$cluster)
 density_plots <- lapply(names(df_c)[1:(ncol(df_c) - 1)], function(col) {
   ggplot(df_c, aes_string(x = col, fill = "cluster")) +
     geom_density(alpha = 0.5) +
-    labs(title = paste(col, "por Clúster")) +
+    labs(title = paste(col)) +
     theme_minimal()
 })
 
-grid.arrange(grobs = density_plots, ncol = 3) 
-
-# Distancias
-
+grid.arrange(grobs = density_plots, ncol = 4) 
 
 # MCA
 
-df_cat = data %>% select(neighbourhood,room_type,type)
+df_cat = data %>% select(neighbourhood_cleansed,room_type,host_response_time)
 
 df_cat = data.frame(lapply(df_cat, function(col) {
   if (is.numeric(col)) {
@@ -141,12 +132,20 @@ fviz_mca_var(mca, col.var = "cos2",
 
 # outlier de precio
 
-ggplot(data, aes(x = 1, y = log(price))) +
+data$price <- as.numeric(gsub("[$,]", "", data$price))
+
+# Crear el boxplot
+ggplot(data, aes(y = price)) +
   geom_boxplot() +
-  labs(x = NULL) + 
+  labs(x = NULL, y = "Precio") +
   scale_y_continuous(labels = scales::comma_format(scale = 1, big.mark = ",")) +
   theme_minimal()
 
+ggplot(data, aes(y = price)) +
+  geom_boxplot() +
+  labs(x = NULL, y = "Precio") +
+  scale_y_continuous(labels = scales::comma_format(scale = 1, big.mark = ",")) +
+  theme_minimal()
 
 data_filtrada <- filter(data, price <= 50000)
 
@@ -158,14 +157,6 @@ ggplot(data_filtrada, aes(x = price)) +
   scale_y_continuous(labels = scales::comma_format()) +
   theme_minimal()
 
-# Alternativa
-
-ggplot(data, aes(x = 1, y = price)) +
-  geom_boxplot() +
-  labs(x = NULL) + 
-  scale_y_continuous(limits= c(0,50000),labels = scales::comma_format(scale = 1, big.mark = ",")) +
-  theme_minimal()
-
 # boxplot de precio --> hasta 50.000
 
 ggplot(data_filtrada, aes(x = 1, y = price)) +
@@ -174,15 +165,14 @@ ggplot(data_filtrada, aes(x = 1, y = price)) +
   scale_y_continuous(labels = scales::comma_format(scale = 1, big.mark = ",")) +
   theme_minimal()
 
-
 # frecuencia barrios
 
-frecuencia_barrios <- table(data$neighbourhood)
+frecuencia_barrios <- table(data$neighbourhood_cleansed)
 barrios_ordenados <- names(sort(frecuencia_barrios, decreasing = TRUE))
 top5_barrios <- barrios_ordenados[1:5]
-datos_top5 <- data[data$neighbourhood %in% top5_barrios, ]
-datos_top5$neighbourhood <- factor(datos_top5$neighbourhood, levels = top5_barrios)
-grafico <- ggplot(datos_top5, aes(x = neighbourhood, fill = neighbourhood)) +
+datos_top5 <- data[data$neighbourhood_cleansed %in% top5_barrios, ]
+datos_top5$neighbourhood_cleansed <- factor(datos_top5$neighbourhood_cleansed, levels = top5_barrios)
+grafico <- ggplot(datos_top5, aes(x = neighbourhood_cleansed, fill = neighbourhood_cleansed)) +
   geom_bar(stat = "count") +
   labs(
        x = NULL,  
@@ -196,7 +186,7 @@ print(grafico)
 
 # analisis de palermo por room_type
 
-datos_palermo <- subset(data, neighbourhood == "Palermo")
+datos_palermo <- subset(data, neighbourhood_cleansed == "Palermo")
 
 grafico <- ggplot(datos_palermo, aes(x = reorder(room_type, -table(room_type)[room_type]), fill = room_type)) +
   geom_bar() +

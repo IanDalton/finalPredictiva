@@ -3,6 +3,7 @@
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
+library(stringr)
 library(janitor)
 library(skimr)
 library(GGally)
@@ -19,13 +20,6 @@ library(igraph)
 library(factoextra)
 library(FactoMineR)
 library(gridExtra)
-library(mice)
-library(heatmaply)
-library(pheatmap)
-library(dendextend)
-library(viridis)
-
-data = read.csv("listings_clean.csv")
 
 # Missings
 
@@ -57,7 +51,7 @@ GGally::ggcorr(
 
 # Clustering
 
-cols <- c( "price","host_listings_count","accommodates", "bathrooms", "bedrooms", "beds", "minimum_nights", "maximum_nights", "availability_30", "availability_60", "availability_90", "availability_365", "number_of_reviews", "calculated_host_listings_count",  "reviews_per_month", "is_shared_bathroom")
+cols <- c("host_listings_count", "bathrooms", "bedrooms", "beds", "minimum_nights", "maximum_nights", "availability_30", "availability_60", "availability_90", "availability_365", "number_of_reviews",  "reviews_per_month", "is_shared_bathroom")
 
 rob_scale <- function(x) {
   if (is.numeric(x)) {
@@ -82,7 +76,7 @@ df_c <- df_c[, sapply(df_c, function(x) var(x, na.rm = TRUE) > variance_threshol
 hopkins = factoextra::get_clust_tendency(df_c, n=35, seed=321)
 cat("Hopkins =", hopkins$hopkins_stat)
 
-###Hopkins = 0.9967427
+###Hopkins = 0.9338175
 
 # agrupaciones
 
@@ -184,20 +178,17 @@ grafico <- ggplot(datos_top5, aes(x = neighbourhood_cleansed, fill = neighbourho
   guides(fill = FALSE)
 print(grafico)
 
-# analisis de palermo por room_type
+# analisis de room_type
 
-datos_palermo <- subset(data, neighbourhood_cleansed == "Palermo")
-
-grafico <- ggplot(datos_palermo, aes(x = reorder(room_type, -table(room_type)[room_type]), fill = room_type)) +
+grafico <- ggplot(data, aes(x = reorder(room_type, -table(room_type)[room_type]), fill = room_type)) +
   geom_bar() +
-  labs(title = "Análisis de Palermo",
+  labs(
        x = "Tipo de habitación",
        y = "Cantidad de registros") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),  
         plot.title = element_text(hjust = 0.5),
         axis.title.x = element_blank(), 
-        axis.title.y = element_blank())  +  
-  guides(fill = FALSE)
+        axis.title.y = element_blank())  
 
 print(grafico)
 
@@ -222,83 +213,51 @@ grafico_puntos <- ggplot(data_filtrada2, aes(x = room_type, y = price, color = r
   guides(color = FALSE)  
 print(grafico_puntos)
 
-# cantidad de habitaciones vs price
+# frecuencias de forma de verificacion 
 
-datos_filtrados3 <- subset(data, bedroom <= 5 & price <= 1000000)
+data %>%
+  mutate(categorias = str_extract_all(host_verifications, "'(.*?)'")) %>%   # Extraer palabras entre comillas
+  unnest(categorias) %>%                                              # Expandir la lista a filas
+  count(categorias) %>%                                                # Contar la frecuencia
+  arrange(desc(n)) %>%                                                # Ordenar de mayor a menor frecuencia
+  ggplot(aes(x = reorder(categorias, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "steelblue", alpha = 0.7) +
+  labs( x = NULL ,  y = "Frecuencia") +
+  theme_minimal()
 
-ggplot(datos_filtrados3, aes(x = bedroom, y = price)) +
-  geom_point() +  # Puntos para cada observación
-  labs(title = "Cantidad de habitaciones vs Precio",
-       x = "Cantidad de Habitaciones",
-       y = "Precio") +
-  scale_y_continuous(labels = scales::dollar_format()) +  # Formato de etiquetas en dólares
-  theme_minimal()  +
-  theme(plot.title = element_text(hjust = 0.5)) 
+# frecuencias de amenities --> top 10
 
-# cantidad de camas vs price
-
-datos_filtrados4 <- subset(data, bed <= 5 & price <= 1000000)
-
-ggplot(datos_filtrados4, aes(x = bed, y = price)) +
-  geom_point() +
-  labs(title = "Cantidad de camas vs Precio",
-       x = "Cantidad de camas",
-       y = "Precio") +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  scale_x_continuous(breaks = seq(0, 10, 1)) +  # Establecer los números del eje x
+data %>%
+  mutate(categorias = str_extract_all(amenities, '"(.*?)"') %>%
+           lapply(str_trim)) %>%  
+  unnest(categorias) %>%
+  filter(!grepl(",", categorias)) %>% 
+  count(categorias) %>%
+  arrange(desc(n)) %>%
+  head(10) %>%  # Select the top 10 rows
+  ggplot(aes(x = reorder(categorias, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "steelblue", alpha = 0.7) +
+  labs(x = NULL, y = NULL) +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5)) 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# cantidad de baños vs price
+# boxplot Price vs host_is_superhost
 
-datos_filtrados5 <- subset(data, bath <= 5 & price <= 1000000 & bath %in% c(1, 2, 3, 4, 5))
-
-ggplot(datos_filtrados5, aes(x = bath, y = price)) +
-  geom_point() +  
-  labs(title = "Cantidad de baños vs Precio",
-       x = "Cantidad de baños",
-       y = "Precio") +
-  scale_y_continuous(labels = scales::dollar_format()) + 
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5)) 
-
-# create a multiple box plot graph compating the price of each room type and price
-
-ggplot(data, aes(x = room_type, y = log(price), fill = room_type)) +
+data <- na.omit(data)
+ggplot(data, aes(x = host_is_superhost, y = price)) +
   geom_boxplot() +
-  labs(
-       x = "Tipo de Habitación",
-       y = "Precio",
-       caption = "Se uso una escala logaritmica") +
-  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())  +
-  guides(color = FALSE)
+  labs(x = 'Superhost', y = 'Precio') +
+  theme_minimal()
 
-#create the same graph but with the neighbourhood
+modelo_anova <- aov(price ~ host_is_superhost, data = data)
+summary(modelo_anova)
 
-ggplot(data, aes(x = neighbourhood_cleansed, y = log(price), fill = neighbourhood_cleansed)) +
-  geom_boxplot() +
-  labs(
-       x = "Barrio",
-       y = "Precio",
-       caption = "Se uso una escala logaritmica",
-       subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ neighbourhood_cleansed, data = data))$`Pr(>F)`[1])) +
-  scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +  
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())  +
-  guides(color = FALSE)
+# boxplot Price vs host_response_time
 
+data$host_response_time <- factor(data$host_response_time,
+                                  levels = c('within an hour', 'within a few hours', 'within a day', 'a few days or more'))
 
-# botplot  de cantidad de camas y precio. un boxplot por cada cama
-
-ggplot(data, aes(x = factor(beds), y = log(price), fill = factor(beds))) +
+ggplot(data, aes(x = host_response_time, y = price)) +
   geom_boxplot() +
   labs(
        x = "Cantidad de camas",

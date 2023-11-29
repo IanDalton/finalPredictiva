@@ -57,7 +57,7 @@ GGally::ggcorr(
 
 # Clustering
 
-cols <- c( "host_listings_count","accommodates", "bathrooms", "bedrooms", "beds", "minimum_nights", "maximum_nights", "availability_30", "availability_60", "availability_90", "availability_365", "number_of_reviews", "calculated_host_listings_count",  "reviews_per_month", "is_shared_bathroom")
+cols <- c( "price","host_listings_count","accommodates", "bathrooms", "bedrooms", "beds", "minimum_nights", "maximum_nights", "availability_30", "availability_60", "availability_90", "availability_365", "number_of_reviews", "calculated_host_listings_count",  "reviews_per_month", "is_shared_bathroom")
 
 rob_scale <- function(x) {
   if (is.numeric(x)) {
@@ -360,4 +360,40 @@ ggplot(data_modified, aes(x = categorias, y = log(price), fill = categorias)) +
        subtitle = paste("ANOVA p-value: ", anova(lm(log(price) ~ categorias, data = data_modified))$`Pr(>F)`[1])
        ) +
   scale_y_continuous(labels = scales::number_format(scale = 1, accuracy = 1)) +
-  theme_minimal() 
+  theme_minimal()
+
+# piecharts bar de cantidad y tipo de propiedad, separado por tiempo de respuesta
+
+data %>%
+  group_by( host_response_time,room_type) %>%
+  summarise(count = n()) %>%
+  group_by(room_type) %>%
+  mutate(percentage = count / sum(count)) %>%
+  ggplot(aes(x = "", y = percentage, fill = room_type)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start = 0) +
+  facet_wrap(~room_type) +
+  theme_void() +
+  theme(legend.position = "bottom") +
+  labs(
+       x = NULL,
+       y = NULL,
+       fill = "Tipo de habitación") 
+
+# Now the other way around
+
+data %>%
+  group_by(room_type,host_response_time) %>%
+  summarise(count = n()) %>%
+  group_by(room_type) %>%
+  mutate(percentage = count / sum(count)) %>%
+  ggplot(aes(x = "", y = percentage, fill = host_response_time)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start = 0) +
+  facet_wrap(~room_type) +
+  theme_void() +
+  theme(legend.position = "bottom") +
+  labs(
+       x = NULL,
+       y = NULL,
+       fill = "Tipo de habitación")
